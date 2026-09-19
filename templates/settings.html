@@ -1,0 +1,468 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Smooth toast slide and fade animations */
+    @keyframes toastSlideIn {
+        from {
+            transform: translateY(30px) scale(0.96);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+    }
+    @keyframes toastFadeOut {
+        from {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+        to {
+            transform: translateY(20px) scale(0.96);
+            opacity: 0;
+        }
+    }
+    .custom-toast-container {
+        animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        min-width: 380px;
+        max-width: 460px;
+    }
+    .custom-toast-exit {
+        animation: toastFadeOut 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .toast-code-badge {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        background-color: #f1f5f9;
+        color: #0f172a;
+        padding: 3px 8px;
+        border-radius: 4px;
+        border: 1px solid #cbd5e1;
+        display: inline-block;
+        margin: 2px 0;
+    }
+    .toast-brand-logo {
+        height: 35px;
+        width: auto;
+        max-width: 100px;
+        object-fit: contain;
+        display: inline-block;
+        image-rendering: -webkit-optimize-contrast;
+    }
+</style>
+
+<div class="card p-4 shadow-sm border-0 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="fw-bold mb-1"><i class="fa-solid fa-sliders text-primary me-2"></i> Engine Configuration</h4>
+            <p class="text-muted small m-0">Adjust audit thresholds, framework coverage, and decentralization endpoints.</p>
+        </div>
+        <span class="badge bg-light text-dark border px-3 py-2 font-monospace">CSPM Engine v1.0</span>
+    </div>
+
+    <div class="row g-4">
+        <!-- 1. Blockchain Settings -->
+        <div class="col-md-6">
+            <div class="border rounded p-3 h-100 bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold text-dark m-0"><i class="fa-brands fa-ethereum text-warning me-2"></i>EVM Blockchain Node</h6>
+                    <span id="node-status-badge" class="badge bg-secondary">Unchecked</span>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary">JSON-RPC Provider URL</label>
+                    <input type="text" class="form-control font-monospace form-control-sm" value="http://127.0.0.1:7545" readonly>
+                    <div class="form-text" style="font-size: 11px;">Local Ganache Ethereum testnet node listening on port 7545.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary">Smart Contract Target Address</label>
+                    <input type="text" class="form-control font-monospace text-primary fw-bold form-control-sm" value="{{ contract_address or '0x8B757aD9A22d8C7B07e05C3Bf3B73738B1e' }}" readonly>
+                    <div class="form-text" style="font-size: 11px;">Audit ledger contract verifying SHA-256 state hashes.</div>
+                </div>
+
+                <button class="btn btn-outline-dark btn-sm w-100" id="btn-ping-node" onclick="pingGanacheNode()">
+                    <i class="fa-solid fa-satellite-dish me-1"></i> Test EVM Connection & Latency
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. Compliance Framework Filters & Global Threshold -->
+        <div class="col-md-6">
+            <div class="border rounded p-3 h-100 bg-white d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold text-dark m-0"><i class="fa-solid fa-shield-halved text-primary me-2"></i>Compliance Rulesets</h6>
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle" style="font-size: 10px;">
+                            <i class="fa-solid fa-lock me-1"></i>Core Enforced
+                        </span>
+                    </div>
+                    
+                    <!-- Locked Base Ruleset 1: NIST -->
+                    <div class="p-2 mb-2 rounded bg-light border">
+                        <div class="form-check m-0">
+                            <input class="form-check-input" type="checkbox" id="nCheck" checked disabled style="cursor: not-allowed; opacity: 0.65; filter: grayscale(1);">
+                            <label class="form-check-label fw-bold small text-dark d-flex align-items-center justify-content-between" for="nCheck" style="cursor: not-allowed;">
+                                <span>NIST Cybersecurity Framework (CSF v1.1)</span>
+                                <i class="fa-solid fa-lock text-muted" style="font-size: 11px;"></i>
+                            </label>
+                        </div>
+                        <div class="text-muted small ps-4 mt-1" style="font-size: 11px;">
+                            Core governance baseline. <span class="text-secondary">Mandatory benchmark — cannot be disabled for security posture integrity.</span>
+                        </div>
+                    </div>
+
+                    <!-- Locked Base Ruleset 2: CIS -->
+                    <div class="p-2 mb-3 rounded bg-light border">
+                        <div class="form-check m-0">
+                            <input class="form-check-input" type="checkbox" id="cCheck" checked disabled style="cursor: not-allowed; opacity: 0.65; filter: grayscale(1);">
+                            <label class="form-check-label fw-bold small text-dark d-flex align-items-center justify-content-between" for="cCheck" style="cursor: not-allowed;">
+                                <span>CIS Foundation Benchmarks (Azure & AWS v2.0)</span>
+                                <i class="fa-solid fa-lock text-muted" style="font-size: 11px;"></i>
+                            </label>
+                        </div>
+                        <div class="text-muted small ps-4 mt-1" style="font-size: 11px;">
+                            Essential cloud infrastructure baseline. <span class="text-secondary">Enforced by organizational security policy.</span>
+                        </div>
+                    </div>
+
+                    <!-- Extension Rulesets Dropdown -->
+                    <div class="mb-3 pt-2 border-top">
+                        <label class="form-label small fw-bold text-secondary mb-1">
+                            <i class="fa-solid fa-cloud-arrow-down me-1 text-primary"></i> Install Additional Frameworks (Registry)
+                        </label>
+                        <div class="input-group input-group-sm">
+                            <select class="form-select" id="frameworkSelect">
+                                <option value="" selected disabled>Select compliance framework from registry...</option>
+                                <option value="PCI-DSS-v4.0 (Payment Card Industry Data Security)">PCI-DSS v4.0 (Payment Card Industry)</option>
+                                <option value="SOC-2-Type-II (Trust Services Criteria)">SOC 2 Type II (Trust Services Criteria)</option>
+                                <option value="ISO/IEC-27001:2022 (Cloud Security Standard)">ISO/IEC 27001:2022 ISMS Controls</option>
+                                <option value="HIPAA-Security-Rule (45 CFR Part 160/164)">HIPAA Security Rule (Health Data)</option>
+                                <option value="GDPR-Cloud-Privacy-Controls">GDPR Technical Privacy Controls</option>
+                            </select>
+                            <button class="btn btn-outline-primary" type="button" onclick="requestFramework()">
+                                <i class="fa-solid fa-plus me-1"></i> Add
+                            </button>
+                        </div>
+                        <div class="form-text text-muted" style="font-size: 11px;">
+                            Request modular compliance packages to expand audit coverage.
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Container for Added Frameworks -->
+                    <div id="custom-rulesets-container"></div>
+                </div>
+
+                <div class="pt-2 border-top mt-3">
+                    <label class="form-label small fw-bold text-secondary mb-1">Global Compliance Pass Threshold (%)</label>
+                    <div class="d-flex align-items-center gap-3">
+                        <input type="range" class="form-range" min="40" max="90" value="70" id="thresholdRange" oninput="updateThreshold(this.value)">
+                        <span id="threshVal" class="badge bg-warning text-dark fs-6 px-2">70%</span>
+                    </div>
+                    <div class="text-muted small mt-1" style="font-size: 11px;">Audits scoring below this threshold are flagged <strong>NON-COMPLIANT</strong> in live dashboards and PDF reports.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Active Azure Telemetry Overview -->
+        <div class="col-12">
+            <div class="border rounded p-3 bg-light">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold text-secondary m-0 small text-uppercase" style="letter-spacing: 0.5px;">
+                        <i class="fa-brands fa-microsoft text-primary me-2"></i> Active Azure Credentials (ARM Discovery)
+                    </h6>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 10px;">Environment Loaded</span>
+                </div>
+                <div class="row g-2 font-monospace" style="font-size: 12px;">
+                    <div class="col-md-4">
+                        <div class="bg-white p-2 border rounded">
+                            <span class="text-muted d-block" style="font-size: 10px;">SUBSCRIPTION ID</span>
+                            <span class="text-dark fw-bold">{{ azure_info.subscription_id if azure_info else '8685-276-5112-4854-911a-334798657ec3' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="bg-white p-2 border rounded">
+                            <span class="text-muted d-block" style="font-size: 10px;">TENANT ID</span>
+                            <span class="text-dark fw-bold">{{ azure_info.tenant_id if azure_info else 'b41b72d3-1e5f-4a0b-932d-3c22ad65b210' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="bg-white p-2 border rounded">
+                            <span class="text-muted d-block" style="font-size: 10px;">CLIENT ID</span>
+                            <span class="text-dark fw-bold">{{ azure_info.client_id if azure_info else '9d2f62b1-6a2c-4731-89be-5ec5c11030e4' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Active AWS Telemetry Overview -->
+        <div class="col-12">
+            <div class="border rounded p-3 bg-light" style="border-left: 4px solid #ff9900 !important;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold text-secondary m-0 small text-uppercase" style="letter-spacing: 0.5px;">
+                        <i class="fa-brands fa-aws text-warning me-2"></i> Active AWS Credentials (Boto3 SDK Discovery)
+                    </h6>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 10px;">Boto3 Active</span>
+                </div>
+                <div class="row g-2 font-monospace" style="font-size: 12px;">
+                    <div class="col-md-4">
+                        <div class="bg-white p-2 border rounded">
+                            <span class="text-muted d-block" style="font-size: 10px;">AUDITOR ACCESS KEY</span>
+                            <span class="text-dark fw-bold">{{ aws_info.access_key if aws_info else 'AKIA4AY6... (Active)' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="bg-white p-2 border rounded">
+                            <span class="text-muted d-block" style="font-size: 10px;">DEFAULT AUDIT REGION</span>
+                            <span class="text-dark fw-bold">{{ aws_info.region if aws_info else 'ap-south-1 (Mumbai)' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="bg-white p-2 border rounded">
+                            <span class="text-muted d-block" style="font-size: 10px;">IAM POLICY SCOPE</span>
+                            <span class="text-dark fw-bold">SecurityAudit (Read-Only)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-end mb-4">
+    <button class="btn btn-primary px-4 shadow-sm" id="btn-save-settings" onclick="saveSettings()">
+        <i class="fa-solid fa-floppy-disk me-1"></i> Save Configuration
+    </button>
+</div>
+
+<script>
+    function updateThreshold(val) {
+        const badge = document.getElementById('threshVal');
+        if (!badge) return;
+        badge.innerText = `${val}%`;
+        if (val >= 80) {
+            badge.className = 'badge bg-danger fs-6 px-2';
+        } else if (val >= 60) {
+            badge.className = 'badge bg-warning text-dark fs-6 px-2';
+        } else {
+            badge.className = 'badge bg-success fs-6 px-2';
+        }
+    }
+
+    async function pingGanacheNode() {
+        const btn = document.getElementById('btn-ping-node');
+        const badge = document.getElementById('node-status-badge');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Measuring Latency...';
+
+        const startTime = performance.now();
+        try {
+            const res = await fetch('/api/system_status');
+            const data = await res.json();
+            const latency = Math.round(performance.now() - startTime);
+
+            if (data.ganache_connected) {
+                badge.className = 'badge bg-success';
+                badge.innerText = 'Connected';
+                btn.className = 'btn btn-outline-success btn-sm w-100';
+                btn.innerHTML = `<i class="fa-solid fa-circle-check me-1"></i> Node Online (${latency}ms)`;
+            } else {
+                badge.className = 'badge bg-danger';
+                badge.innerText = 'Offline';
+                btn.className = 'btn btn-outline-danger btn-sm w-100';
+                btn.innerHTML = '<i class="fa-solid fa-circle-xmark me-1"></i> RPC Unreachable';
+            }
+        } catch (e) {
+            badge.className = 'badge bg-danger';
+            badge.innerText = 'Error';
+            btn.className = 'btn btn-outline-danger btn-sm w-100';
+            btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i> Connection Failed';
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function renderFrameworkCard(frameworkName) {
+        const container = document.getElementById('custom-rulesets-container');
+        const cardId = `framework-${frameworkName.replace(/[^a-zA-Z0-9]/g, '-')}`;
+
+        if (document.getElementById(cardId)) return;
+
+        const card = document.createElement('div');
+        card.id = cardId;
+        card.className = "p-2 mb-2 rounded border bg-light d-flex justify-content-between align-items-center";
+        card.innerHTML = `
+            <div>
+                <div class="fw-bold small text-dark d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-hourglass-half text-warning" style="font-size: 11px;"></i>
+                    <span class="font-monospace fw-bold">${frameworkName}</span>
+                </div>
+                <div class="text-muted small" style="font-size: 10.5px;">
+                    <span class="text-danger fw-bold">Not active yet</span> — Administrator notified. The request will be reviewed.
+                </div>
+            </div>
+            <span class="badge bg-warning-subtle text-warning border border-warning-subtle" style="font-size: 10px;">Pending Review</span>
+        `;
+        container.appendChild(card);
+    }
+
+    function requestFramework() {
+        const select = document.getElementById('frameworkSelect');
+        const frameworkName = select.value;
+        if (!frameworkName) return;
+
+        let requested = [];
+        try {
+            requested = JSON.parse(localStorage.getItem('cspm_requested_frameworks') || '[]');
+        } catch (e) {
+            requested = [];
+        }
+
+        if (requested.includes(frameworkName)) {
+            showAdminNotificationToast(frameworkName, true);
+            return;
+        }
+
+        requested.push(frameworkName);
+        localStorage.setItem('cspm_requested_frameworks', JSON.stringify(requested));
+
+        renderFrameworkCard(frameworkName);
+        select.selectedIndex = 0;
+
+        showAdminNotificationToast(frameworkName, false);
+    }
+
+    function showAdminNotificationToast(frameworkName, alreadyExists = false) {
+        const existingToast = document.getElementById('admin-toast-container');
+        if (existingToast) existingToast.remove();
+
+        const toastWrapper = document.createElement('div');
+        toastWrapper.id = 'admin-toast-container';
+        toastWrapper.className = 'position-fixed bottom-0 end-0 p-4 custom-toast-container';
+        toastWrapper.style.zIndex = '1100';
+
+        const toastHeaderTitle = alreadyExists ? "REQUEST ALREADY SUBMITTED" : "ADMINISTRATOR NOTIFIED";
+        const messageDetail = alreadyExists 
+            ? `Rule package is already queued in the policy review registry.` 
+            : `Rule package queued for engine integration and validation review.`;
+
+        // High-contrast, enlarged logo from /static/logo.png
+        const brandLogo = `
+            <img src="/static/logo.png?v=2" 
+                 alt="CSPM Logo" 
+                 class="toast-brand-logo"
+                 onerror="this.onerror=null; this.src='/static/favicon.ico';">
+        `;
+
+        toastWrapper.innerHTML = `
+            <div class="card border-0 shadow-lg overflow-hidden" style="border-radius: 8px;">
+                <div class="px-3 py-2 text-white d-flex align-items-center justify-content-between" style="background-color: #0F172A; min-height: 44px;">
+                    <div class="d-flex align-items-center gap-2">
+                        ${brandLogo}
+                        <span class="fw-bold" style="font-size: 11.5px; letter-spacing: 0.5px;">${toastHeaderTitle}</span>
+                    </div>
+                    <button type="button" class="btn btn-sm text-white-50 p-0 border-0 ms-2" onclick="dismissAdminToast()" style="font-size: 18px; line-height: 1;">&times;</button>
+                </div>
+                <div class="p-3 bg-white">
+                    <p class="text-secondary small m-0 mb-2" style="font-size: 12px; line-height: 1.4;">
+                        ${messageDetail}
+                    </p>
+                    <div class="d-flex align-items-center">
+                        <span class="toast-code-badge">${frameworkName}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                        <span class="text-muted" style="font-size: 10.5px;">Action logged to compliance queue</span>
+                        <span class="badge bg-light text-secondary border font-monospace" style="font-size: 9.5px;">Auto-close in 5s</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(toastWrapper);
+
+        if (window.toastTimeout) clearTimeout(window.toastTimeout);
+        window.toastTimeout = setTimeout(() => {
+            dismissAdminToast();
+        }, 5000);
+    }
+
+    function dismissAdminToast() {
+        const toast = document.getElementById('admin-toast-container');
+        if (!toast) return;
+        if (window.toastTimeout) clearTimeout(window.toastTimeout);
+        toast.classList.add('custom-toast-exit');
+        setTimeout(() => toast.remove(), 340);
+    }
+
+    function saveSettings() {
+        const threshold = document.getElementById('thresholdRange').value;
+        localStorage.setItem('cspm_threshold', threshold);
+
+        const btn = document.getElementById('btn-save-settings');
+        const originalText = btn.innerHTML;
+        btn.className = "btn btn-success px-4 shadow-sm";
+        btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Configuration Saved!';
+        
+        setTimeout(() => {
+            btn.className = "btn btn-primary px-4 shadow-sm";
+            btn.innerHTML = originalText;
+        }, 1800);
+    }
+
+    // ---------------------------------------------------------
+    // BULLETPROOF LIFECYCLE & SERVER REBOOT SYNC
+    // ---------------------------------------------------------
+    async function syncLifecycleAndRender() {
+        const container = document.getElementById('custom-rulesets-container');
+        let liveBootId = "{{ server_boot_id }}";
+
+        try {
+            // Bust cache with timestamp to guarantee a fresh check from Flask
+            const res = await fetch('/api/system_status?_t=' + Date.now());
+            const data = await res.json();
+            if (data && data.server_boot_id) {
+                liveBootId = data.server_boot_id;
+            }
+        } catch (err) {
+            console.warn("Could not verify server boot via API, falling back to template context.");
+        }
+
+        const cachedBootId = localStorage.getItem('cspm_server_boot_id');
+
+        // Check if server restarted (boot ID changed or missing)
+        if (!cachedBootId || (liveBootId && liveBootId !== cachedBootId)) {
+            // Server restarted: wipe all pending requests
+            localStorage.removeItem('cspm_requested_frameworks');
+            localStorage.setItem('cspm_server_boot_id', liveBootId);
+            if (container) container.innerHTML = '';
+        } else {
+            // Server is still in the same session: render requested frameworks
+            if (container) container.innerHTML = ''; // Prevent duplicate entries
+            try {
+                const requested = JSON.parse(localStorage.getItem('cspm_requested_frameworks') || '[]');
+                requested.forEach(name => renderFrameworkCard(name));
+            } catch (e) {
+                console.warn("Error restoring custom frameworks:", e);
+            }
+        }
+
+        // Restore threshold slider value
+        const savedThresh = localStorage.getItem('cspm_threshold');
+        if (savedThresh) {
+            const slider = document.getElementById('thresholdRange');
+            if (slider) {
+                slider.value = savedThresh;
+                updateThreshold(savedThresh);
+            }
+        }
+    }
+
+    // 'pageshow' handles regular page loads, hard reloads, AND Chrome bfcache tab switches
+    window.addEventListener('pageshow', () => {
+        syncLifecycleAndRender();
+    });
+</script>
+{% endblock %}

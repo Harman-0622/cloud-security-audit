@@ -1,0 +1,9 @@
+Flask>=3.0.0
+boto3>=1.34.0
+azure-identity>=1.15.0
+azure-mgmt-resource>=23.1.0
+azure-mgmt-storage>=21.1.0
+azure-mgmt-network>=25.3.0
+web3>=6.15.0
+reportlab>=4.1.0
+python-dotenv>=1.0.0

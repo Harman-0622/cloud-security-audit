@@ -1,0 +1,34 @@
+[
+  {
+    "name": "prodcoredata01",
+    "allowBlobPublicAccess": false,
+    "enableHttpsTrafficOnly": true,
+    "minimumTlsVersion": "TLS1_2",
+    "tags": { "Environment": "Production", "Owner": "SecOps" },
+    "logging": { "read": true, "write": true, "delete": true }
+  },
+  {
+    "name": "stdevpublicsandbox",
+    "allowBlobPublicAccess": true,
+    "enableHttpsTrafficOnly": false,
+    "minimumTlsVersion": "TLS1_0",
+    "tags": {},
+    "logging": { "read": false, "write": false, "delete": false }
+  },
+  {
+    "name": "stfinancereports2026",
+    "allowBlobPublicAccess": false,
+    "enableHttpsTrafficOnly": true,
+    "minimumTlsVersion": "TLS1_2",
+    "tags": { "Environment": "Finance", "Owner": "Compliance" },
+    "logging": { "read": true, "write": true, "delete": false }
+  },
+  {
+    "name": "stbackuplogarchive",
+    "allowBlobPublicAccess": false,
+    "enableHttpsTrafficOnly": true,
+    "minimumTlsVersion": "TLS1_3",
+    "tags": { "Environment": "Archive", "Owner": "SecOps" },
+    "logging": { "read": true, "write": true, "delete": true }
+  }
+]

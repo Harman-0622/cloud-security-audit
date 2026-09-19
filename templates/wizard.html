@@ -1,0 +1,200 @@
+<style>
+    /* Step Container styling */
+    .step-row { 
+        display: flex; 
+        align-items: center; 
+        justify-content: space-between; 
+        margin: 18px 0; 
+        font-size: 1.05rem; 
+        color: #6c757d; 
+    }
+    .icon-box { 
+        width: 40px; 
+        height: 40px; 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        margin-right: 15px; 
+        flex-shrink: 0; 
+    }
+    .step-text { 
+        flex-grow: 1; 
+    }
+    
+    /* 1. Cloud Floating Animations */
+    @keyframes floatAzure { 
+        0% { transform: translateY(0px); } 
+        50% { transform: translateY(-5px); } 
+        100% { transform: translateY(0px); } 
+    }
+    .anim-float-azure { 
+        animation: floatAzure 1.4s ease-in-out infinite; 
+        color: #0078d4; 
+        font-size: 1.55rem; 
+    }
+
+    @keyframes floatAws { 
+        0% { transform: translateY(0px) scale(0.96); } 
+        50% { transform: translateY(-5px) scale(1.04); } 
+        100% { transform: translateY(0px) scale(0.96); } 
+    }
+    .anim-float-aws { 
+        animation: floatAws 1.4s ease-in-out infinite; 
+        color: #ff9900; 
+        font-size: 1.6rem; 
+    }
+
+    /* 2. Building/Analyzing Animation */
+    @keyframes pulse-build { 
+        0% { transform: scale(0.9); opacity: 0.7; color: #ff9900; } 
+        50% { transform: scale(1.1); opacity: 1; color: #232f3e; } 
+        100% { transform: scale(0.9); opacity: 0.7; color: #ff9900; } 
+    }
+    .anim-build { animation: pulse-build 1s infinite; font-size: 1.5rem; }
+
+    /* 3. Scrambling Hash Styling */
+    .scramble-text { 
+        font-family: monospace; 
+        font-size: 0.85rem; 
+        background: #e9ecef; 
+        padding: 2px 6px; 
+        border-radius: 4px; 
+        color: #d63384; 
+        font-weight: bold; 
+    }
+
+    /* 4. Ganache Melting Block Animation */
+    .ganache-block { 
+        position: relative; 
+        width: 32px; 
+        height: 32px; 
+        background-color: #4E342E; 
+        border-radius: 6px; 
+        box-shadow: inset -2px -2px 5px rgba(0,0,0,0.4); 
+        overflow: hidden; 
+    }
+    .ganache-top { position: absolute; top: 0; left: 0; right: 0; height: 6px; background-color: #FFB300; z-index: 2; }
+    .drip { position: absolute; top: 4px; background-color: #FFB300; border-radius: 0 0 10px 10px; z-index: 1; }
+    @keyframes dripAnim1 { 0% { height: 0px; } 100% { height: 16px; } }
+    @keyframes dripAnim2 { 0% { height: 0px; } 100% { height: 26px; } }
+    @keyframes dripAnim3 { 0% { height: 0px; } 100% { height: 12px; } }
+    .drip-1 { left: 5px; width: 5px; animation: dripAnim1 0.8s forwards ease-in; }
+    .drip-2 { left: 14px; width: 6px; animation: dripAnim2 1.2s forwards ease-in; }
+    .drip-3 { left: 24px; width: 4px; animation: dripAnim3 0.9s forwards ease-in; }
+
+    /* 5. Animated Success Checkmark */
+    @keyframes bounceIn { 
+        0% { transform: scale(0); opacity: 0; } 
+        60% { transform: scale(1.2); opacity: 1; } 
+        100% { transform: scale(1); opacity: 1; } 
+    }
+    .anim-bounce { 
+        animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; 
+        display: inline-block; 
+        font-size: 3rem; 
+        color: #198754; 
+    }
+
+    /* Dynamic Provider States */
+    .active-step-azure { color: #0078d4 !important; font-weight: bold; }
+    .active-step-aws { color: #d97706 !important; font-weight: bold; }
+    .done-step { color: #198754 !important; font-weight: bold; }
+    .hidden-element { display: none !important; }
+</style>
+
+<!-- Wizard UI (Hidden by default) -->
+<div class="card p-4 shadow-sm" id="wizard-ui" style="display: none;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="m-0" id="wizard-title">
+            <i class="fa-solid fa-spinner fa-spin me-2" id="wizard-spinner"></i>
+            <span id="wizard-title-text">Compiling Audit Data...</span>
+        </h5>
+    </div>
+    <hr>
+
+    <!-- Step 1: Cloud API Connection (Dynamic Azure / AWS) -->
+    <div class="step-row" id="step1">
+        <div class="d-flex align-items-center flex-grow-1">
+            <div class="icon-box">
+                <!-- Azure Icon -->
+                <i class="fa-brands fa-microsoft anim-float-azure" id="icon1-azure"></i>
+                <!-- AWS Icon -->
+                <i class="fa-brands fa-aws anim-float-aws hidden-element" id="icon1-aws"></i>
+                <!-- Completion Checkmark -->
+                <i class="fa-solid fa-check text-success hidden-element" id="done1"></i>
+            </div>
+            <div class="step-text" id="step-text-1">1. Connecting to Cloud API...</div>
+        </div>
+        <div class="d-flex align-items-center gap-2 ms-3" style="width: 150px; flex-shrink: 0;">
+            <div class="progress flex-grow-1" style="height: 6px; background-color: #e2e8f0;">
+                <div id="pbar1" class="progress-bar" role="progressbar" style="width: 0%; transition: width 0.05s linear;"></div>
+            </div>
+            <span id="ptext1" class="small text-muted font-monospace" style="font-size: 11px; width: 34px; text-align: right;">0%</span>
+        </div>
+    </div>
+
+    <!-- Step 2: Rules Evaluation (Dynamic CIS Benchmarks) -->
+    <div class="step-row" id="step2">
+        <div class="d-flex align-items-center flex-grow-1">
+            <div class="icon-box">
+                <i class="fa-solid fa-layer-group anim-build hidden-element" id="icon2"></i>
+                <i class="fa-solid fa-check text-success hidden-element" id="done2"></i>
+            </div>
+            <div class="step-text" id="step-text-2">2. Evaluating NIST/CIS Framework Rules...</div>
+        </div>
+        <div class="d-flex align-items-center gap-2 ms-3" style="width: 150px; flex-shrink: 0;">
+            <div class="progress flex-grow-1" style="height: 6px; background-color: #e2e8f0;">
+                <div id="pbar2" class="progress-bar" role="progressbar" style="width: 0%; transition: width 0.05s linear;"></div>
+            </div>
+            <span id="ptext2" class="small text-muted font-monospace" style="font-size: 11px; width: 34px; text-align: right;">0%</span>
+        </div>
+    </div>
+
+    <!-- Step 3: Cryptographic Hashing -->
+    <div class="step-row" id="step3">
+        <div class="d-flex align-items-center flex-grow-1">
+            <div class="icon-box">
+                <i class="fa-solid fa-microchip text-danger fa-beat hidden-element" id="icon3"></i>
+                <i class="fa-solid fa-check text-success hidden-element" id="done3"></i>
+            </div>
+            <div class="step-text">
+                3. Hashing Cryptographic Digest...
+                <span class="scramble-text hidden-element ms-2" id="hash-display"></span>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 ms-3" style="width: 150px; flex-shrink: 0;">
+            <div class="progress flex-grow-1" style="height: 6px; background-color: #e2e8f0;">
+                <div id="pbar3" class="progress-bar" role="progressbar" style="width: 0%; transition: width 0.05s linear;"></div>
+            </div>
+            <span id="ptext3" class="small text-muted font-monospace" style="font-size: 11px; width: 34px; text-align: right;">0%</span>
+        </div>
+    </div>
+
+    <!-- Step 4: Ganache EVM Record -->
+    <div class="step-row" id="step4">
+        <div class="d-flex align-items-center flex-grow-1">
+            <div class="icon-box">
+                <div class="ganache-block hidden-element" id="icon4">
+                    <div class="ganache-top"></div>
+                    <div class="drip drip-1"></div>
+                    <div class="drip drip-2"></div>
+                    <div class="drip drip-3"></div>
+                </div>
+                <i class="fa-solid fa-check text-success hidden-element" id="done4"></i>
+            </div>
+            <div class="step-text" id="step-text-4">4. Appending to Ganache Blockchain...</div>
+        </div>
+        <div class="d-flex align-items-center gap-2 ms-3" style="width: 150px; flex-shrink: 0;">
+            <div class="progress flex-grow-1" style="height: 6px; background-color: #e2e8f0;">
+                <div id="pbar4" class="progress-bar" role="progressbar" style="width: 0%; transition: width 0.05s linear;"></div>
+            </div>
+            <span id="ptext4" class="small text-muted font-monospace" style="font-size: 11px; width: 34px; text-align: right;">0%</span>
+        </div>
+    </div>
+
+    <!-- Final Step Success Notification -->
+    <div class="text-center mt-4 hidden-element" id="final-step">
+        <i class="fa-solid fa-circle-check anim-bounce"></i>
+        <h5 class="text-success mt-2" id="final-step-heading">Audit Complete!</h5>
+    </div>
+</div>

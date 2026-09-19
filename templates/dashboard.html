@@ -1,0 +1,643 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .aws-btn { background-color: #f97316; color: #ffffff; font-weight: bold; border: none; transition: 0.2s; }
+    .aws-btn:hover { background-color: #ea580c; color: #ffffff; }
+    
+    /* Minimalist Cloud Selection Cards */
+    .cloud-card {
+        cursor: pointer;
+        border: 1px solid #e9ecef;
+        border-left: 4px solid #cbd5e1 !important; /* Neutral grey default */
+        border-radius: 6px;
+        background-color: #ffffff;
+        transition: all 0.2s ease-in-out;
+    }
+    .cloud-card:hover {
+        border-color: #cbd5e1;
+        background-color: #f8fafc;
+    }
+
+    /* Selected States */
+    .cloud-card.azure-selected {
+        border-color: #b9d7ea !important;
+        border-left: 4px solid #0078D4 !important; /* Azure Blue */
+        background-color: #f0f7ff !important;
+    }
+
+    .cloud-card.aws-selected {
+        border-color: #fcd34d !important;
+        border-left: 4px solid #ff9900 !important; /* AWS Yellow */
+        background-color: #1e293b !important;       /* Clean Matte Black/Slate */
+        color: #ffffff !important;
+    }
+    
+    .cloud-card.aws-selected .cloud-title {
+        color: #ffffff !important;
+    }
+    .cloud-card.aws-selected .badge-connector {
+        background-color: #ff9900 !important;
+        color: #111827 !important;
+        font-weight: 700;
+    }
+
+    .empty-state { text-align: center; padding: 40px 20px; color: #6c757d; border: 2px dashed #dee2e6; border-radius: 8px; background: #fff;}
+</style>
+
+<div class="row">
+    <!-- Left Column: Scan Configuration -->
+    <div class="col-md-4">
+        <div class="card p-3 shadow-sm mb-4" id="control-panel" style="border: 1px solid #e2e8f0; border-radius: 10px;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="text-uppercase text-muted fw-bold m-0" style="font-size: 11px; letter-spacing: 0.5px;">1. Select Environment & Scope</h6>
+                <span class="badge bg-light text-secondary border" id="rg-count-badge">Checking scope...</span>
+            </div>
+
+            <!-- Azure Selection Card -->
+            <div class="card cloud-card azure-selected p-2 mb-2" id="card-azure" onclick="selectCloud('azure')">
+                <div class="d-flex align-items-center">
+                    <i class="fa-brands fa-microsoft text-primary fa-lg me-2 ms-1"></i>
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <span class="fw-semibold cloud-title text-dark" style="font-size: 13px;">Microsoft Azure</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle badge-connector" id="azure-badge" style="font-size: 10px;">
+                            <i class="fa-solid fa-bolt me-1"></i>Live ARM
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+                        <!-- AWS Selection Card -->
+            <div class="card cloud-card p-2 mb-3" id="card-aws" onclick="selectCloud('aws')">
+                <div class="d-flex align-items-center">
+                    <i class="fa-brands fa-aws text-warning fa-lg me-2 ms-1"></i>
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <span class="fw-semibold cloud-title text-secondary" style="font-size: 13px;">Amazon Web Services</span>
+                        <span class="badge bg-light text-secondary border badge-connector" id="aws-badge" style="font-size: 10px;">
+                            <i class="fa-solid fa-bolt me-1"></i>Live Boto3
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scope Selector Dropdown with Refresh Control -->
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="form-label small fw-bold text-secondary m-0">Audit Target Scope</label>
+                    <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" onclick="loadResourceGroups()" title="Refresh Resource Groups from Azure">
+                        <i id="rg-refresh-icon" class="fa-solid fa-arrows-rotate text-muted" style="font-size: 12px;"></i>
+                    </button>
+                </div>
+                
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white text-muted border-end-0"><i class="fa-regular fa-folder-open text-primary"></i></span>
+                    <select class="form-select form-select-sm border-start-0" id="rg-selector">
+                        <option value="rg-cspm-demo" selected>Loading Azure Resource Groups...</option>
+                    </select>
+                </div>
+                <div class="form-text mt-1 text-muted" style="font-size: 11px;">
+                    <i class="fa-solid fa-shield-halved text-success me-1"></i>Scans live Storage Accounts & Network Security Groups.
+                </div>
+            </div>
+            
+            <hr class="my-2">
+            
+            <h6 class="text-uppercase text-muted fw-bold mb-2" style="font-size: 11px; letter-spacing: 0.5px;">2. Execution Options</h6>
+            
+            <!-- EVM Ledger Switch -->
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="commitEVM" checked style="cursor: pointer;">
+                <label class="form-check-label small fw-semibold" for="commitEVM" style="cursor: pointer;">
+                    Commit to EVM Ledger
+                    <span class="d-block text-muted fw-normal" style="font-size: 10px;">Anchors SHA-256 state digest onto Ganache</span>
+                </label>
+            </div>
+            
+            <!-- PDF Report Switch -->
+            <div class="form-check form-switch mb-4">
+                <input class="form-check-input" type="checkbox" id="genPDF" checked style="cursor: pointer;">
+                <label class="form-check-label small fw-semibold" for="genPDF" style="cursor: pointer;">
+                    Generate PDF Report
+                    <span class="d-block text-muted fw-normal" style="font-size: 10px;">Creates ReportLab compliance assessment</span>
+                </label>
+            </div>
+
+            <button class="btn aws-btn w-100 py-2 d-flex align-items-center justify-content-center fw-bold shadow-sm" onclick="startAudit()">
+                <i class="fa-solid fa-play me-2"></i> Initiate Security Audit
+            </button>
+        </div>
+    </div>
+
+    <!-- Right Column: Dashboard Data -->
+    <div class="col-md-8">
+        
+        <!-- Default Empty State -->
+        <div id="empty-dashboard" class="empty-state shadow-sm">
+            <i class="fa-solid fa-chart-pie fa-3x mb-3 text-secondary"></i>
+            <h5>Awaiting Audit Data</h5>
+            <p>Select a cloud environment and initiate a scan to populate compliance metrics.</p>
+        </div>
+
+        <!-- Modular Progress Wizard Injection -->
+        {% include 'wizard.html' %}
+
+        <!-- Results Dashboard (Revealed by JS) -->
+        <div class="card p-4 shadow-sm" id="results-ui" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="text-success m-0"><i class="fa-solid fa-shield-check"></i> Scan Complete</h5>
+                <span class="badge bg-dark" id="out-scan-id"></span>
+            </div>
+            
+            <div class="row mb-4">
+                <!-- Doughnut Chart: Overall Health -->
+                <div class="col-md-5 text-center border-end">
+                    <h6 class="text-muted text-uppercase fw-bold mb-3" style="font-size: 12px;">Overall Posture</h6>
+                    <div style="height: 200px; position: relative; margin: 0 auto;">
+                        <canvas id="postureChart"></canvas>
+                    </div>
+                    <h3 class="mt-2" id="global-score-text">--%</h3>
+                </div>
+                
+                <!-- Bar Chart: NIST Framework -->
+                <div class="col-md-7">
+                    <h6 class="text-muted text-uppercase fw-bold mb-3" style="font-size: 12px;">NIST CSF Breakdown</h6>
+                    <div style="height: 200px; position: relative; width: 100%;">
+                        <canvas id="frameworkChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ledger Information -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h6 class="text-muted text-uppercase fw-bold" style="font-size: 12px;">Cryptographic Ledger Record (EVM)</h6>
+                    <div class="d-flex gap-2">
+                        <div class="w-50" style="font-family: monospace; background:#f4f4f4; padding:8px; font-size:11px; word-break: break-all; border-radius: 4px;">
+                            <span class="fw-bold text-secondary">PAYLOAD HASH:</span> <br> <span id="out-hash" class="text-dark"></span>
+                        </div>
+                        <div class="w-50" style="font-family: monospace; background:#f4f4f4; padding:8px; font-size:11px; word-break: break-all; border-radius: 4px;">
+                            <span class="fw-bold text-secondary">TRANSACTION ID:</span> <br> <span id="out-tx" class="text-primary"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <button class="btn btn-outline-dark w-100 py-2 mb-2 d-flex align-items-center justify-content-center shadow-sm" 
+                                onclick="verifyOnChain()" 
+                                style="border-radius: 6px; font-weight: 500; letter-spacing: 0.3px;">
+                            <i class="fa-solid fa-magnifying-glass me-2"></i> Verify Integrity on EVM
+                        </button>
+
+                        <a id="pdf-download-btn" href="#" target="_blank" rel="noopener noreferrer" 
+                           class="btn w-100 py-2 d-flex align-items-center justify-content-center text-white shadow-sm"
+                           style="display: none; background: linear-gradient(135deg, #0078D4 0%, #005a9e 100%); border: none; border-radius: 6px; font-weight: 500; letter-spacing: 0.3px;">
+                            <i class="fa-solid fa-file-pdf me-2"></i> View Executive Audit Report (PDF)
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actionable Findings Table -->
+            <div class="row">
+                <div class="col-12">
+                    <h6 class="text-muted text-uppercase fw-bold mb-3" style="font-size: 12px;">Detailed Security Findings</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover border">
+                            <thead class="table-light text-secondary" style="font-size: 13px;">
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Resource ID</th>
+                                    <th>Security Rule Evaluated</th>
+                                    <th>Framework</th>
+                                </tr>
+                            </thead>
+                            <tbody id="findings-table-body" style="font-size: 13px;">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Dynamic Script Section -->
+<script src="{{ url_for('static', filename='js/wizard.js') }}"></script>
+<script>
+    let currentCloudProvider = 'azure';
+    let postureChartInstance = null;
+    let frameworkChartInstance = null;
+
+    function selectCloud(provider) {
+        currentCloudProvider = provider;
+        const azureCard = document.getElementById('card-azure');
+        const awsCard = document.getElementById('card-aws');
+        const azureBadge = document.getElementById('azure-badge');
+        const awsBadge = document.getElementById('aws-badge');
+        const scopeLabel = document.querySelector("label.form-label.small.fw-bold.text-secondary");
+
+        if (provider === 'azure') {
+            azureCard.className = 'card cloud-card azure-selected p-2 mb-2';
+            const azTitle = azureCard.querySelector('.cloud-title');
+            if (azTitle) azTitle.className = 'fw-semibold cloud-title text-dark';
+            if (azureBadge) azureBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle badge-connector';
+
+            awsCard.className = 'card cloud-card p-2 mb-3';
+            const awsTitle = awsCard.querySelector('.cloud-title');
+            if (awsTitle) awsTitle.className = 'fw-semibold cloud-title text-secondary';
+            if (awsBadge) awsBadge.className = 'badge bg-light text-secondary border badge-connector';
+
+            if (scopeLabel) scopeLabel.innerText = "Audit Target Scope (Resource Group)";
+            loadResourceGroups();
+        } else if (provider === 'aws') {
+            awsCard.className = 'card cloud-card aws-selected p-2 mb-3';
+            const awsTitle = awsCard.querySelector('.cloud-title');
+            if (awsTitle) awsTitle.className = 'fw-semibold cloud-title text-white';
+            if (awsBadge) awsBadge.className = 'badge badge-connector';
+
+            azureCard.className = 'card cloud-card p-2 mb-2';
+            const azTitle = azureCard.querySelector('.cloud-title');
+            if (azTitle) azTitle.className = 'fw-semibold cloud-title text-secondary';
+            if (azureBadge) azureBadge.className = 'badge bg-light text-secondary border badge-connector';
+
+            if (scopeLabel) scopeLabel.innerText = "Audit Target Scope (AWS Region)";
+            loadAwsRegions();
+        }
+    }
+
+    async function loadAwsRegions() {
+        const rgSelect = document.getElementById('rg-selector');
+        const countBadge = document.getElementById('rg-count-badge');
+        const refreshIcon = document.getElementById('rg-refresh-icon');
+
+        if (refreshIcon) refreshIcon.classList.add('fa-spin');
+        if (countBadge) {
+            countBadge.innerText = 'Checking regions...';
+            countBadge.className = 'badge bg-light text-secondary border';
+        }
+
+        try {
+            const res = await fetch('/api/aws/regions');
+            const data = await res.json();
+
+            if (rgSelect && data.regions && data.regions.length > 0) {
+                rgSelect.innerHTML = '';
+                data.regions.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.name;
+                    opt.innerText = `${r.name} (${r.location})`;
+                    if (r.name === 'ap-south-1') opt.selected = true;
+                    rgSelect.appendChild(opt);
+                });
+
+                const allOpt = document.createElement('option');
+                allOpt.value = 'ALL';
+                allOpt.innerText = 'Global (All Regions)';
+                rgSelect.appendChild(allOpt);
+
+                if (countBadge) {
+                    countBadge.innerText = `${data.regions.length} Regions Available`;
+                    countBadge.className = 'badge bg-light text-secondary border';
+                }
+            }
+        } catch (err) {
+            if (rgSelect) {
+                rgSelect.innerHTML = '<option value="ap-south-1" selected>ap-south-1 (Mumbai)</option><option value="ALL">Global (All Regions)</option>';
+            }
+        } finally {
+            if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+        }
+    }
+
+    async function loadResourceGroups() {
+        const rgSelect = document.getElementById('rg-selector');
+        const countBadge = document.getElementById('rg-count-badge');
+        const refreshIcon = document.getElementById('rg-refresh-icon');
+
+        if (refreshIcon) refreshIcon.classList.add('fa-spin');
+        if (countBadge) {
+            countBadge.innerText = 'Checking scope...';
+            countBadge.className = 'badge bg-light text-secondary border';
+        }
+
+        try {
+            const res = await fetch('/api/azure/resource_groups');
+            const data = await res.json();
+
+            if (rgSelect && data.resource_groups && data.resource_groups.length > 0) {
+                rgSelect.innerHTML = '';
+                let validCount = 0;
+
+                data.resource_groups.forEach(item => {
+                    let name = typeof item === 'string' ? item : (item.name || '');
+                    let location = typeof item === 'object' ? (item.location || 'azure') : 'azure';
+
+                    if (name && name !== 'undefined') {
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        opt.innerText = `${name} (${location})`;
+                        if (name === 'rg-cspm-demo') opt.selected = true;
+                        rgSelect.appendChild(opt);
+                        validCount++;
+                    }
+                });
+
+                const allOpt = document.createElement('option');
+                allOpt.value = 'ALL';
+                allOpt.innerText = 'Full Subscription (All Groups)';
+                rgSelect.appendChild(allOpt);
+
+                if (countBadge) {
+                    countBadge.innerText = `${validCount} Group${validCount === 1 ? '' : 's'} Discovered`;
+                    countBadge.className = 'badge bg-light text-secondary border';
+                }
+            } else if (rgSelect) {
+                rgSelect.innerHTML = '<option value="rg-cspm-demo" selected>rg-cspm-demo (centralindia)</option>';
+                if (countBadge) countBadge.innerText = '1 Group Discovered';
+            }
+        } catch (err) {
+            if (rgSelect) {
+                rgSelect.innerHTML = '<option value="rg-cspm-demo" selected>rg-cspm-demo (centralindia)</option><option value="ALL">Full Subscription (All Groups)</option>';
+            }
+            if (countBadge) countBadge.innerText = 'Cached (1 Group)';
+        } finally {
+            if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+        }
+    }
+
+    function renderDashboard(auditData) {
+        if (!auditData) return;
+
+        const emptyDash = document.getElementById('empty-dashboard');
+        const wizardUi = document.getElementById('wizard-ui');
+        const resultsUi = document.getElementById('results-ui');
+
+        if (emptyDash) emptyDash.style.setProperty('display', 'none', 'important');
+        if (wizardUi) wizardUi.style.setProperty('display', 'none', 'important');
+        if (resultsUi) resultsUi.style.setProperty('display', 'block', 'important');
+
+        if (document.getElementById('out-scan-id')) 
+            document.getElementById('out-scan-id').innerText = auditData.scan_id || 'N/A';
+        if (document.getElementById('out-tx')) 
+            document.getElementById('out-tx').innerText = auditData.tx_hash || 'Pending';
+        if (document.getElementById('out-hash')) 
+            document.getElementById('out-hash').innerText = auditData.report_hash || 'N/A';
+
+        // Calculate and display scores with user threshold from Settings
+        const scores = auditData.scores || {};
+        const globalScore = Number(scores.global_score !== undefined ? scores.global_score : 0).toFixed(1);
+        const scoreElem = document.getElementById('global-score-text');
+        
+        // Read custom threshold from settings (default to 70%)
+        const userThreshold = parseInt(localStorage.getItem('cspm_threshold') || '70', 10);
+        const isCompliant = parseFloat(globalScore) >= userThreshold;
+
+        if (scoreElem) {
+            scoreElem.innerText = `${globalScore}%`;
+            // Green if meeting or exceeding threshold, Red if falling short
+            scoreElem.className = isCompliant 
+                ? "mt-2 text-success fw-bold" 
+                : "mt-2 text-danger fw-bold";
+        }
+
+        const pdfBtn = document.getElementById('pdf-download-btn');
+        if (pdfBtn) {
+            if (auditData.report_url) {
+                pdfBtn.href = auditData.report_url;
+                pdfBtn.target = '_blank';
+                pdfBtn.rel = 'noopener noreferrer';
+                pdfBtn.style.setProperty('display', 'inline-flex', 'important');
+            } else {
+                pdfBtn.style.display = 'none';
+            }
+        }
+
+        // Posture Doughnut Chart
+        try {
+            if (postureChartInstance) postureChartInstance.destroy();
+            const pCanvas = document.getElementById('postureChart');
+            if (pCanvas) {
+                const pCtx = pCanvas.getContext('2d');
+                const passedCount = scores.passed_rules !== undefined ? scores.passed_rules : (auditData.findings || []).filter(f => f.status === 'PASS').length;
+                const failedCount = scores.failed_rules !== undefined ? scores.failed_rules : (auditData.findings || []).filter(f => f.status === 'FAIL').length;
+
+                postureChartInstance = new Chart(pCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Passed Rules', 'Failed Rules'],
+                        datasets: [{
+                            data: [passedCount, failedCount],
+                            backgroundColor: ['#198754', '#dc3545'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+        } catch (e) {
+            console.warn("Posture chart render error:", e);
+        }
+
+        // Framework Bar Chart (Dynamic Cloud Themes)
+        try {
+            if (frameworkChartInstance) frameworkChartInstance.destroy();
+            const fCanvas = document.getElementById('frameworkChart');
+            if (fCanvas) {
+                const fCtx = fCanvas.getContext('2d');
+                const nist = scores.nist_scores || {};
+                const idScore = nist.IDENTIFY ?? scores.identify_score ?? 0;
+                const prScore = nist.PROTECT ?? scores.protect_score ?? 0;
+                const deScore = nist.DETECT ?? scores.detect_score ?? 0;
+
+                const isAws = (auditData.cloud_provider === 'aws') || (auditData.scan_id && auditData.scan_id.includes('AWS'));
+                const barColor = isAws ? '#FF9900' : '#0078D4';
+
+                frameworkChartInstance = new Chart(fCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Identify', 'Protect', 'Detect'],
+                        datasets: [{
+                            label: 'Compliance Score (%)',
+                            data: [idScore, prScore, deScore],
+                            backgroundColor: barColor,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        scales: { y: { beginAtZero: true, max: 100 } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+        } catch (e) {
+            console.warn("Framework chart render error:", e);
+        }
+
+        // Populate Findings Table
+        const tableBody = document.getElementById('findings-table-body');
+        if (tableBody) {
+            tableBody.innerHTML = '';
+            (auditData.findings || []).forEach(finding => {
+                const statusBadge = finding.status === 'PASS' 
+                    ? '<span class="badge bg-success">PASS</span>' 
+                    : '<span class="badge bg-danger">FAIL</span>';
+                
+                const severityColor = finding.severity === 'HIGH' ? 'text-danger fw-bold' : (finding.severity === 'MEDIUM' ? 'text-warning fw-bold' : 'text-secondary');
+                
+                tableBody.innerHTML += `
+                    <tr>
+                        <td>${statusBadge}</td>
+                        <td class="font-monospace text-secondary">${finding.resource_type || 'Resource'}: ${finding.resource_name || 'N/A'}</td>
+                        <td>
+                            <span class="fw-bold">${finding.cis_rule_id || 'N/A'}</span>
+                            <span class="${severityColor} ms-2" style="font-size:11px;">[${finding.severity || 'MED'}]</span>
+                        </td>
+                        <td><span class="badge bg-light text-dark border">${finding.nist_function || 'N/A'}</span></td>
+                    </tr>
+                `;
+            });
+        }
+    }
+
+    async function startAudit() {
+        const emptyDash = document.getElementById('empty-dashboard');
+        const resultsUi = document.getElementById('results-ui');
+        const wizardUi = document.getElementById('wizard-ui');
+        const pdfBtn = document.getElementById('pdf-download-btn');
+        const savedThreshold = parseInt(localStorage.getItem('cspm_threshold') || '70', 10);
+
+        if (pdfBtn) {
+            pdfBtn.style.display = 'none';
+            pdfBtn.removeAttribute('href');
+        }
+        if (emptyDash) emptyDash.style.display = 'none';
+        if (resultsUi) resultsUi.style.display = 'none';
+        if (wizardUi) wizardUi.style.display = 'block';
+        
+        let auditData = null;
+        let auditError = null;
+        
+        const rgElem = document.getElementById('rg-selector');
+        let selectedRG = rgElem ? rgElem.value : 'rg-cspm-demo';
+        if (!selectedRG || selectedRG === 'undefined') selectedRG = 'rg-cspm-demo';
+
+        const wantsPdf = document.getElementById('genPDF') ? document.getElementById('genPDF').checked : true;
+        const wantsEVM = document.getElementById('commitEVM') ? document.getElementById('commitEVM').checked : true;
+
+        // 1. Initiate backend scan promise
+        const fetchPromise = fetch('/api/run_scan', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                cloud_provider: currentCloudProvider,
+                scan_mode: 'live',
+                resource_group: selectedRG,
+                generate_pdf: wantsPdf,
+                commit_to_evm: wantsEVM,
+                compliance_threshold: savedThreshold 
+            })
+        })
+        .then(async res => {
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(`Server Error (${res.status}): ${errText.substring(0, 120)}`);
+            }
+            return res.json();
+        })
+        .then(data => { auditData = data; })
+        .catch(err => { auditError = err; });
+
+        // 2. Play wizard animation synchronized with the backend promise
+        if (typeof playWizardAnimation === "function") {
+            await playWizardAnimation(wantsEVM, currentCloudProvider, fetchPromise);
+        } else {
+            await fetchPromise;
+        }
+
+        // 3. Handle any network/runtime failure
+        if (auditError || !auditData || auditData.status === 'error') {
+            alert("Scan Notice: " + (auditError ? auditError.message : (auditData ? auditData.message : "Scan failed.")));
+            if (wizardUi) wizardUi.style.display = 'none';
+            if (emptyDash) emptyDash.style.display = 'block';
+            return;
+        }
+
+        // 4. Save state cleanly to localStorage (unified keys)
+        localStorage.setItem('cspm_latest_scan', JSON.stringify(auditData));
+        localStorage.setItem('cspm_latest_provider', currentCloudProvider);
+
+        // 5. Seamlessly reveal dashboard results
+        renderDashboard(auditData);
+    }
+
+    function verifyOnChain() {
+        const scanIdElem = document.getElementById('out-scan-id');
+        const scanId = scanIdElem ? scanIdElem.innerText.trim() : null;
+        if (!scanId || scanId === 'N/A') {
+            alert('No active scan ID found to verify.');
+            return;
+        }
+
+        fetch(`/api/verify/${scanId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(`✅ BLOCKCHAIN VERIFICATION SUCCESSFUL\n\nRetrieved Hash: ${data.data.report_hash}`);
+                } else {
+                    alert(`❌ ERROR: ${data.message}`);
+                }
+            })
+            .catch(err => alert("Verification request failed: " + err));
+    }
+
+    // ---------------------------------------------------------
+    // PERSISTENCE & SERVER RESTART DETECTION
+    // ---------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', () => {
+        const serverBootId = "{{ server_boot_id }}";
+        const cachedBootId = localStorage.getItem('cspm_server_boot_id');
+
+        // 1. Detect if Flask was restarted
+        if (!cachedBootId || cachedBootId !== serverBootId) {
+            // Server was restarted: clear past scan results so empty dashboard displays
+            localStorage.removeItem('cspm_latest_scan');
+            localStorage.removeItem('cspm_latest_provider');
+            localStorage.setItem('cspm_server_boot_id', serverBootId);
+        }
+
+        const savedData = localStorage.getItem('cspm_latest_scan');
+        const savedProvider = localStorage.getItem('cspm_latest_provider');
+
+        // 2. Restore cloud selection or default to azure
+        if (savedProvider && typeof selectCloud === 'function') {
+            selectCloud(savedProvider);
+        } else {
+            selectCloud('azure');
+        }
+
+        // 3. If a scan exists within this current server session, restore it
+        if (savedData) {
+            try {
+                const parsed = JSON.parse(savedData);
+                if (parsed && (parsed.status === 'success' || parsed.scan_id)) {
+                    renderDashboard(parsed);
+                    return;
+                }
+            } catch (err) {
+                console.warn("Could not load cached scan:", err);
+            }
+        }
+
+        // 4. Default: Show empty dashboard with no results
+        const emptyDash = document.getElementById('empty-dashboard');
+        const resultsUi = document.getElementById('results-ui');
+        const wizardUi = document.getElementById('wizard-ui');
+        if (emptyDash) emptyDash.style.setProperty('display', 'block', 'important');
+        if (resultsUi) resultsUi.style.setProperty('display', 'none', 'important');
+        if (wizardUi) wizardUi.style.setProperty('display', 'none', 'important');
+    });
+</script>
+{% endblock %}

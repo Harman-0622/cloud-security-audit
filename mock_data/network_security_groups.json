@@ -1,0 +1,68 @@
+[
+  {
+    "name": "nsg-prod-aks-cluster",
+    "securityRules": [
+      {
+        "name": "Allow-HTTPS-Inbound",
+        "direction": "Inbound",
+        "access": "Allow",
+        "protocol": "TCP",
+        "sourceAddressPrefix": "*",
+        "destinationPortRange": "443"
+      },
+      {
+        "name": "Deny-All-Inbound",
+        "direction": "Inbound",
+        "access": "Deny",
+        "protocol": "*",
+        "sourceAddressPrefix": "*",
+        "destinationPortRange": "*"
+      }
+    ],
+    "tags": { "Environment": "Prod", "Owner": "DevOps" }
+  },
+  {
+    "name": "nsg-legacy-bastion",
+    "securityRules": [
+      {
+        "name": "Open-RDP-Direct",
+        "direction": "Inbound",
+        "access": "Allow",
+        "protocol": "TCP",
+        "sourceAddressPrefix": "*",
+        "destinationPortRange": "3389"
+      },
+      {
+        "name": "Open-SSH-Direct",
+        "direction": "Inbound",
+        "access": "Allow",
+        "protocol": "TCP",
+        "sourceAddressPrefix": "*",
+        "destinationPortRange": "22"
+      }
+    ],
+    "tags": {}
+  },
+  {
+    "name": "nsg-db-private-tier",
+    "securityRules": [
+      {
+        "name": "Allow-App-Subnet-Only",
+        "direction": "Inbound",
+        "access": "Allow",
+        "protocol": "TCP",
+        "sourceAddressPrefix": "10.0.2.0/24",
+        "destinationPortRange": "5432"
+      },
+      {
+        "name": "Deny-Internet-Inbound",
+        "direction": "Inbound",
+        "access": "Deny",
+        "protocol": "*",
+        "sourceAddressPrefix": "Internet",
+        "destinationPortRange": "*"
+      }
+    ],
+    "tags": { "Environment": "Prod", "Tier": "Database" }
+  }
+]

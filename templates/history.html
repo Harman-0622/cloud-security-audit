@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card p-4 shadow-sm border-0">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="m-0 fw-bold"><i class="fa-solid fa-database text-primary me-2"></i>Audit History & Chain Ledger</h4>
+            <p class="text-muted small m-0 mt-1">Review historical scan snapshots, granular finding registries, and immutable EVM transaction receipts.</p>
+        </div>
+        <span class="badge bg-light text-dark border px-3 py-2">SQLite + EVM Logged</span>
+    </div>
+
+    <!-- Sub-tabs navigation -->
+    <ul class="nav nav-tabs mb-3" id="historyTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active fw-bold" id="scans-tab" data-bs-toggle="tab" data-bs-target="#scans-pane" type="button">
+                <i class="fa-solid fa-list-check me-1"></i> Scan Snapshots
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold" id="findings-tab" data-bs-toggle="tab" data-bs-target="#findings-pane" type="button">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i> Global Findings Ledger
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold" id="blockchain-tab" data-bs-toggle="tab" data-bs-target="#blockchain-pane" type="button">
+                <i class="fa-brands fa-ethereum me-1 text-primary"></i> EVM Blockchain Logs
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- 1. Scans Tab -->
+        <div class="tab-pane fade show active" id="scans-pane">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle border">
+                    <thead class="table-light text-secondary" style="font-size: 13px;">
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Scan ID</th>
+                            <th>Provider</th>
+                            <th>Global Score</th>
+                            <th>Rules (Pass/Fail)</th>
+                            <th>Blockchain TX</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody style="font-size: 14px;">
+                        {% for scan in scans %}
+                        {% set is_aws = ('AWS' in (scan.scan_id or '')) or (scan.cloud_provider == 'aws') %}
+                        <tr style="cursor: pointer;" onclick="openHistoryDetails('{{ scan.scan_id }}')">
+                            <td class="text-secondary">{{ scan.timestamp }}</td>
+                            <td class="font-monospace fw-bold text-dark">{{ scan.scan_id }}</td>
+                            <td>
+                                {% if is_aws %}
+                                    <span class="badge border" style="background: #1e293b; color: #ff9900; border-color: #ff9900 !important; font-size: 11px;">
+                                        <i class="fa-brands fa-aws me-1"></i>AWS
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 11px;">
+                                        <i class="fa-brands fa-microsoft me-1"></i>Azure
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if scan.global_score >= 80 %}
+                                    <span class="badge bg-success">{{ scan.global_score }}%</span>
+                                {% elif scan.global_score >= 50 %}
+                                    <span class="badge bg-warning text-dark">{{ scan.global_score }}%</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{{ scan.global_score }}%</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="text-success fw-bold">{{ scan.passed_rules }}</span> / <span class="text-danger fw-bold">{{ scan.failed_rules }}</span></td>
+                            <td class="font-monospace text-primary" style="font-size: 11px;">
+                                {% if scan.tx_hash and scan.tx_hash.startswith('0x') %}
+                                    {{ scan.tx_hash[:18] }}...
+                                {% elif scan.tx_hash == 'OFF_CHAIN_AUDIT' %}
+                                    <span class="badge bg-secondary-subtle text-secondary border">Off-Chain</span>
+                                {% else %}
+                                    <span class="text-muted">{{ scan.tx_hash or 'N/A' }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); openHistoryDetails('{{ scan.scan_id }}')">
+                                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Inspect
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="7" class="text-center text-muted py-5">No audits found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 2. Findings Ledger Tab -->
+        <div class="tab-pane fade" id="findings-pane">
+            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-sm table-hover align-middle border" style="font-size: 13px;">
+                    <thead class="table-light position-sticky top-0">
+                        <tr>
+                            <th>Status</th>
+                            <th>Cloud</th>
+                            <th>Scan ID</th>
+                            <th>Resource</th>
+                            <th>Rule ID</th>
+                            <th>NIST Function</th>
+                            <th>Severity</th>
+                            <th>Remediation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in findings %}
+                        {% set is_aws_finding = 'AWS' in f.resource_type or 'CIS-AWS' in f.cis_rule_id %}
+                        <tr>
+                            <td>
+                                {% if f.status == 'PASS' %}
+                                    <span class="badge bg-success">PASS</span>
+                                {% else %}
+                                    <span class="badge bg-danger">FAIL</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if is_aws_finding %}
+                                    <span class="badge border" style="background: #1e293b; color: #ff9900; border-color: #ff9900 !important; font-size: 10px;">
+                                        AWS
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 10px;">
+                                        Azure
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="font-monospace text-muted">{{ f.scan_id }}</td>
+                            <td class="font-monospace">{{ f.resource_type }}: {{ f.resource_name }}</td>
+                            <td class="fw-bold">{{ f.cis_rule_id }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ f.nist_function }}</span></td>
+                            <td>
+                                <span class="{% if f.severity == 'HIGH' %}text-danger fw-bold{% elif f.severity == 'MEDIUM' %}text-warning fw-bold{% else %}text-secondary{% endif %}">
+                                    {{ f.severity }}
+                                </span>
+                            </td>
+                            <td class="text-truncate" style="max-width: 250px;" title="{{ f.remediation }}">{{ f.remediation }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="8" class="text-center text-muted py-4">No individual findings logged yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3. Blockchain Ledger Tab -->
+        <div class="tab-pane fade" id="blockchain-pane">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle border" style="font-size: 13px;">
+                    <thead class="table-light text-secondary">
+                        <tr>
+                            <th>Block #</th>
+                            <th>Scan ID</th>
+                            <th>Transaction Hash (EVM)</th>
+                            <th>Committed Hash</th>
+                            <th>Gas Used</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody class="font-monospace">
+                        {% for b in logs %}
+                        <tr>
+                            <td><span class="badge bg-dark">#{{ b.block_number }}</span></td>
+                            <td class="fw-bold text-secondary">{{ b.scan_id }}</td>
+                            <td class="text-primary text-truncate" style="max-width: 220px;" title="{{ b.tx_hash }}">{{ b.tx_hash }}</td>
+                            <td class="text-truncate" style="max-width: 180px;" title="{{ b.report_hash }}">{{ b.report_hash }}</td>
+                            <td class="text-muted">{{ b.gas_used }}</td>
+                            <td class="text-secondary font-sans-serif" style="font-family: sans-serif;">{{ b.committed_at }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-center text-muted py-4">No EVM blockchain records logged.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Component -->
+<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-chart-pie text-primary me-2"></i> Historical Scan Inspection</h5>
+        <div class="ms-auto d-flex align-items-center gap-2">
+            <span class="badge font-monospace px-3 py-2" id="modal-provider-badge"></span>
+            <span class="badge bg-dark font-monospace px-3 py-2" id="modal-scan-id"></span>
+        </div>
+        <button type="button" class="btn-close ms-3" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row g-4 mb-4">
+            <div class="col-md-5 text-center border-end">
+                <h6 class="text-secondary fw-bold small text-uppercase mb-2">Overall Posture</h6>
+                <div style="height: 180px; position: relative;">
+                    <canvas id="historyPostureChart"></canvas>
+                </div>
+                <h3 class="mt-2 fw-bold" id="modal-score-text">0.0%</h3>
+                <div>
+                    <span class="badge bg-success me-1" id="modal-passed-text">0 Passed</span>
+                    <span class="badge bg-danger" id="modal-failed-text">0 Failed</span>
+                </div>
+            </div>
+            
+            <div class="col-md-7">
+                <h6 class="text-secondary fw-bold small text-uppercase mb-2">NIST CSF Framework Compliance</h6>
+                <div style="height: 210px;">
+                    <canvas id="historyNistChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card bg-light border-0 p-3 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-bold small text-secondary">CRYPTOGRAPHIC LEDGER RECORD (EVM)</span>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-outline-danger py-0 px-2" id="btn-tamper-db" onclick="triggerSimulatedTamper()" title="Simulate database compromise" style="font-size: 11px;">
+                        <i class="fa-solid fa-skull-crossbones me-1"></i> Simulate DB Attack
+                    </button>
+                    <span id="verification-badge" class="badge bg-secondary">Unverified Session</span>
+                </div>
+            </div>
+            <div class="row g-2 font-monospace" style="font-size: 11px;">
+                <div class="col-md-6 bg-white p-2 border rounded">
+                    <span class="text-muted d-block fw-bold">REPORT SHA-256 HASH:</span>
+                    <span id="modal-report-hash" class="text-dark" style="word-break: break-all;"></span>
+                </div>
+                <div class="col-md-6 bg-white p-2 border rounded">
+                    <span class="text-muted d-block fw-bold">BLOCKCHAIN TRANSACTION ID:</span>
+                    <span id="modal-tx-hash" class="text-primary" style="word-break: break-all;"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-2 mb-4">
+            <div class="col-md-6">
+                <button class="btn btn-outline-dark w-100" id="btn-verify-history" onclick="verifyHistoryEVM()">
+                    <i class="fa-solid fa-magnifying-glass me-2"></i> Verify Integrity on EVM
+                </button>
+            </div>
+            <div class="col-md-6">
+                <a href="#" id="btn-download-history" target="_blank" rel="noopener noreferrer" class="btn btn-danger w-100">
+                    <i class="fa-solid fa-file-pdf me-2"></i> View Executive Audit Report (PDF)
+                </a>
+            </div>
+        </div>
+
+        <h6 class="text-secondary fw-bold small text-uppercase mb-2">Evaluated Rule Findings</h6>
+        <div class="table-responsive border rounded" style="max-height: 220px; overflow-y: auto;">
+            <table class="table table-sm table-striped mb-0" style="font-size: 12px;">
+                <thead class="table-light position-sticky top-0">
+                    <tr>
+                        <th>Status</th>
+                        <th>Target Resource</th>
+                        <th>Rule ID</th>
+                        <th>NIST Category</th>
+                    </tr>
+                </thead>
+                <tbody id="modal-findings-body"></tbody>
+            </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    let postureChart = null;
+    let nistChart = null;
+    let activeScanId = "";
+    let activeScanTx = "";
+    let historyModalInstance = null;
+
+    async function openHistoryDetails(scanId) {
+        activeScanId = scanId;
+        const verifyBtn = document.getElementById('btn-verify-history');
+        const badge = document.getElementById('verification-badge');
+        const tamperBtn = document.getElementById('btn-tamper-db');
+        const providerBadge = document.getElementById('modal-provider-badge');
+
+        badge.className = "badge bg-secondary";
+        badge.innerText = "Unverified Session";
+
+        try {
+            const res = await fetch(`/api/scan/${scanId}`);
+            const payload = await res.json();
+            if (payload.status !== 'success') return;
+            const scan = payload.data;
+            activeScanTx = scan.tx_hash || '';
+
+            // Detect Provider
+            const isAws = (scan.findings || []).some(f => (f.cis_rule_id || '').includes('CIS-AWS')) || (scan.cloud_provider === 'aws');
+            if (providerBadge) {
+                if (isAws) {
+                    providerBadge.className = "badge border";
+                    providerBadge.style = "background: #1e293b; color: #ff9900; border-color: #ff9900 !important;";
+                    providerBadge.innerHTML = '<i class="fa-brands fa-aws me-1"></i>Amazon Web Services';
+                } else {
+                    providerBadge.className = "badge bg-primary-subtle text-primary border border-primary-subtle";
+                    providerBadge.style = "";
+                    providerBadge.innerHTML = '<i class="fa-brands fa-microsoft me-1"></i>Microsoft Azure';
+                }
+            }
+
+            document.getElementById('modal-scan-id').innerText = scan.scan_id;
+            document.getElementById('modal-tx-hash').innerText = scan.tx_hash || 'None';
+            document.getElementById('modal-report-hash').innerText = scan.report_hash;
+            
+            const scoreVal = Number(scan.global_score || 0).toFixed(1);
+            const scoreElem = document.getElementById('modal-score-text');
+            scoreElem.innerText = `${scoreVal}%`;
+            scoreElem.className = scoreVal >= 80 ? "mt-2 fw-bold text-success" : (scoreVal >= 50 ? "mt-2 fw-bold text-warning" : "mt-2 fw-bold text-danger");
+            
+            document.getElementById('modal-passed-text').innerText = `${scan.passed_rules} Passed`;
+            document.getElementById('modal-failed-text').innerText = `${scan.failed_rules} Failed`;
+            
+            // Wire report viewing link directly to inline browser viewer
+            document.getElementById('btn-download-history').href = `/download_report/${scan.scan_id}.pdf`;
+
+            // EVM Verification control state
+            if (!activeScanTx || activeScanTx === 'OFF_CHAIN_AUDIT') {
+                verifyBtn.disabled = true;
+                verifyBtn.className = "btn btn-secondary w-100 disabled";
+                verifyBtn.innerHTML = '<i class="fa-solid fa-ban me-2"></i> Off-Chain Audit (No EVM Anchor)';
+                tamperBtn.style.display = 'none';
+            } else {
+                verifyBtn.disabled = false;
+                verifyBtn.className = "btn btn-outline-dark w-100";
+                verifyBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass me-2"></i> Verify Integrity on EVM';
+                tamperBtn.style.display = 'inline-block';
+            }
+
+            // Populate Findings
+            const tbody = document.getElementById('modal-findings-body');
+            tbody.innerHTML = '';
+            (scan.findings || []).forEach(f => {
+                const badgeHtml = f.status === 'PASS' ? '<span class="badge bg-success">PASS</span>' : '<span class="badge bg-danger">FAIL</span>';
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${badgeHtml}</td>
+                        <td class="font-monospace">${f.resource_type}: ${f.resource_name}</td>
+                        <td><span class="fw-bold">${f.cis_rule_id}</span> <span class="text-muted">[${f.severity}]</span></td>
+                        <td>${f.nist_function}</td>
+                    </tr>
+                `;
+            });
+
+            // Posture Doughnut Chart
+            if (postureChart) postureChart.destroy();
+            const pCtx = document.getElementById('historyPostureChart').getContext('2d');
+            postureChart = new Chart(pCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Passed', 'Failed'],
+                    datasets: [{ data: [scan.passed_rules, scan.failed_rules], backgroundColor: ['#198754', '#dc3545'], borderWidth: 0 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { display: false } } }
+            });
+
+            // NIST Bar Chart (Themed dynamically by cloud provider)
+            if (nistChart) nistChart.destroy();
+            const nCtx = document.getElementById('historyNistChart').getContext('2d');
+            const nistBarColor = isAws ? '#FF9900' : '#0078D4';
+            nistChart = new Chart(nCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Identify', 'Protect', 'Detect'],
+                    datasets: [{
+                        data: [scan.identify_score || 0, scan.protect_score || 0, scan.detect_score || 0],
+                        backgroundColor: nistBarColor,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, max: 100 } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            const modalEl = document.getElementById('historyModal');
+            historyModalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            historyModalInstance.show();
+        } catch (e) {
+            console.error("Inspection error:", e);
+        }
+    }
+
+    async function verifyHistoryEVM() {
+        const btn = document.getElementById('btn-verify-history');
+        const badge = document.getElementById('verification-badge');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Querying Ganache Node...';
+
+        try {
+            const res = await fetch(`/api/verify/${activeScanId}`);
+            const result = await res.json();
+            
+            if (result.status === "success") {
+                badge.className = "badge bg-success";
+                badge.innerText = "Verified Authentic on EVM";
+                btn.className = "btn btn-success w-100";
+                btn.innerHTML = '<i class="fa-solid fa-circle-check me-2"></i> Cryptographic Integrity Confirmed';
+            } else if (result.status === "tampered") {
+                badge.className = "badge bg-danger";
+                badge.innerText = "Integrity Hash Mismatch";
+                btn.className = "btn btn-danger w-100";
+                btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-2"></i> Tamper Detected: Hash Divergence!';
+            } else {
+                badge.className = "badge bg-warning text-dark";
+                badge.innerText = "Verification Inconclusive";
+                btn.className = "btn btn-warning w-100";
+                btn.innerHTML = `<i class="fa-solid fa-circle-exclamation me-2"></i> ${result.message}`;
+            }
+        } catch (err) {
+            btn.className = "btn btn-danger w-100";
+            btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-2"></i> Node Connection Error';
+        }
+    }
+
+    async function triggerSimulatedTamper() {
+        if (!confirm(`Simulate an attack on scan ${activeScanId} by modifying the SQLite record locally?`)) return;
+        
+        try {
+            const res = await fetch(`/api/tamper_scan/${activeScanId}`, { method: 'POST' });
+            const data = await res.json();
+            alert(`⚠️ Database Record Compromised!\n${data.message}\n\nClick "Verify Integrity on EVM" to observe cryptographic tamper detection in action.`);
+            
+            document.getElementById('modal-report-hash').innerText = 'TAMPERED_HASH_0xDEADBEEF999999';
+            document.getElementById('modal-score-text').innerText = '99.9%';
+            document.getElementById('modal-score-text').className = 'mt-2 fw-bold text-danger';
+        } catch (e) {
+            alert('Tamper execution failed: ' + e);
+        }
+    }
+</script>
+{% endblock %}

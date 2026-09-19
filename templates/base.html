@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSPM Audit Engine</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for upcoming data viz -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body { background-color: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; overflow-x: hidden; }
+        .sidebar { height: 100vh; width: 250px; position: fixed; top: 0; left: 0; background-color: #232f3e; color: white; padding-top: 20px; }
+        .sidebar-brand { font-size: 1.2rem; font-weight: bold; padding: 10px 20px 30px 20px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #394b5e; margin-bottom: 20px; }
+        .sidebar a { padding: 12px 20px; text-decoration: none; font-size: 1rem; color: #d5dbdb; display: block; transition: 0.2s; }
+        .sidebar a:hover, .sidebar a.active { color: white; background-color: #394b5e; border-left: 4px solid #ff9900; }
+        .sidebar a i { width: 25px; }
+        .main-content { margin-left: 250px; padding: 20px 40px; }
+        .top-nav { background-color: white; padding: 15px 20px; border-bottom: 1px solid #e0e0e0; margin-bottom: 30px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <!-- Sidebar Brand Header -->
+        <!-- Sidebar Brand Header -->
+        <!-- Sidebar Brand Header -->
+        <div class="pt-0 pb-3 px-2 text-center border-bottom border-secondary d-flex flex-column align-items-center justify-content-center">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="CSPM Logo" style="max-height: 88px; width: auto; object-fit: contain;">
+        </div>
+        <a href="/" class="{% if request.path == '/' %}active{% endif %}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+        <a href="/integrations" class="{% if request.path == '/integrations' %}active{% endif %}"><i class="fa-solid fa-cloud"></i> Integrations</a>
+        <a href="/history" class="{% if request.path == '/history' %}active{% endif %}"><i class="fa-solid fa-list"></i> Audit History</a>
+        <a href="/settings" class="{% if request.path == '/settings' %}active{% endif %}"><i class="fa-solid fa-gear"></i> Settings</a>
+    </div>
+
+    <div class="main-content">
+        <div class="top-nav shadow-sm">
+            <h5 class="m-0 text-secondary">Cloud Environment: <span class="text-dark fw-bold">Global Overview</span></h5>
+            <div>
+                <span id="ganache-badge" class="badge bg-secondary">Checking Ganache...</span>
+            </div>
+        </div>
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script>
+        // Real-time Ganache Status Checker
+        window.addEventListener('DOMContentLoaded', (event) => {
+            fetch('/api/system_status')
+                .then(response => response.json())
+                .then(data => {
+                    const badge = document.getElementById('ganache-badge');
+                    if (data.ganache_connected) {
+                        badge.className = 'badge bg-success';
+                        badge.innerHTML = '<i class="fa-solid fa-link"></i> EVM Connected';
+                    } else {
+                        badge.className = 'badge bg-danger';
+                        badge.innerHTML = '<i class="fa-solid fa-link-slash"></i> EVM Disconnected';
+                    }
+                })
+                .catch(err => {
+                    const badge = document.getElementById('ganache-badge');
+                    badge.className = 'badge bg-danger';
+                    badge.innerHTML = 'EVM Error';
+                });
+        });
+    </script>
+    <!-- Load Bootstrap 5 JS Bundle & Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</body>
+</html>

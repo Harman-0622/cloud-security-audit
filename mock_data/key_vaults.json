@@ -1,0 +1,44 @@
+[
+  {
+    "name": "kv-prod-eastus-001",
+    "resourceGroup": "rg-production-core",
+    "location": "eastus",
+    "enablePurgeProtection": true,
+    "enableSoftDelete": true,
+    "networkAcls": {
+      "defaultAction": "Deny",
+      "bypass": "AzureServices"
+    },
+    "keys": [
+      { "kid": "master-db-key", "rotationPolicyEnabled": true, "keyType": "RSA-HSM" }
+    ]
+  },
+  {
+    "name": "kv-dev-testvault",
+    "resourceGroup": "rg-development",
+    "location": "centralus",
+    "enablePurgeProtection": false,
+    "enableSoftDelete": true,
+    "networkAcls": {
+      "defaultAction": "Allow",
+      "bypass": "AzureServices"
+    },
+    "keys": [
+      { "kid": "dev-signing-key", "rotationPolicyEnabled": false, "keyType": "RSA" }
+    ]
+  },
+  {
+    "name": "kv-audit-compliance",
+    "resourceGroup": "rg-compliance",
+    "location": "westeurope",
+    "enablePurgeProtection": true,
+    "enableSoftDelete": true,
+    "networkAcls": {
+      "defaultAction": "Deny",
+      "bypass": "AzureServices"
+    },
+    "keys": [
+      { "kid": "audit-ledger-key", "rotationPolicyEnabled": true, "keyType": "RSA-HSM" }
+    ]
+  }
+]

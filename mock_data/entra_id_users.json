@@ -1,0 +1,38 @@
+[
+  {
+    "userPrincipalName": "admin.secops@corp.onmicrosoft.com",
+    "displayName": "Global SecOps Admin",
+    "accountEnabled": true,
+    "userType": "Member",
+    "mfaEnforced": true,
+    "hasGlobalAdminRole": true,
+    "passwordLastChangedDays": 14
+  },
+  {
+    "userPrincipalName": "temp.contractor@corp.onmicrosoft.com",
+    "displayName": "Contractor Account",
+    "accountEnabled": true,
+    "userType": "Guest",
+    "mfaEnforced": false,
+    "hasGlobalAdminRole": false,
+    "passwordLastChangedDays": 180
+  },
+  {
+    "userPrincipalName": "service.automation@corp.onmicrosoft.com",
+    "displayName": "Automation Pipeline SVC",
+    "accountEnabled": true,
+    "userType": "Member",
+    "mfaEnforced": true,
+    "hasGlobalAdminRole": false,
+    "passwordLastChangedDays": 45
+  },
+  {
+    "userPrincipalName": "legacy.user@corp.onmicrosoft.com",
+    "displayName": "Legacy Inactive Dev",
+    "accountEnabled": true,
+    "userType": "Member",
+    "mfaEnforced": false,
+    "hasGlobalAdminRole": true,
+    "passwordLastChangedDays": 365
+  }
+]
