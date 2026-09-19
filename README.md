@@ -164,77 +164,71 @@ Formal, vector-rendered executive reports generated with ReportLab, containing s
 
 ```text
 cloud-security-audit/
-├── app.py                          # Flask application server, API routes, and session handlers
-├── config.py                       # Centralized configuration and environment parser
-├── test_azure_conn.py              # CLI test suite for Azure ARM SDK authentication
-├── test_live_scanner.py            # CLI test suite for live Azure resource scanning
-├── test_engine.py                  # Unit test harness for CIS/NIST scoring algorithms
+├── .env.example                         # Environment variable template
+├── .gitignore                           # Git ignore rules for venv, db, secrets
+├── app.py                               # Flask server, API routes, and scan coordinator
+├── config.py                            # App configuration and env loader
 ├── contracts/
-│   ├── AuditRegistry.sol           # Solidity smart contract for immutable audit records
-│   └── AuditLedger.sol             # Alternative implementation with event emission logs
+│   └── AuditLedger.sol                  # Solidity contract for on-chain state anchoring
 ├── core/
 │   ├── crypto/
-│   │   ├── __init__.py
-│   │   └── hasher.py               # Deterministic SHA-256 payload digest tree
+│   │   ├── __init__.py                  # Package marker
+│   │   └── hasher.py                    # SHA-256 payload digest generator
 │   ├── reporting/
-│   │   ├── __init__.py
-│   │   └── pdf_generator.py        # Enterprise PDF generation with ReportLab vector graphics
+│   │   ├── __init__.py                  # Package marker
+│   │   └── pdf_generator.py             # ReportLab executive PDF generator
 │   ├── rules/
-│   │   ├── __init__.py
-│   │   ├── cis_benchmark.py        # CIS benchmark rule definitions (Azure & AWS)
-│   │   ├── nist_mapping.py         # NIST CSF v1.1 function taxonomy
-│   │   └── scoring_engine.py       # Weighted compliance and risk score calculation
+│   │   ├── __init__.py                  # Package marker
+│   │   ├── cis_benchmark.py             # CIS rule definitions for Azure and AWS
+│   │   ├── nist_mapping.py              # NIST CSF v1.1 function mappings
+│   │   └── scoring_engine.py            # Compliance scoring and threshold logic
 │   ├── scanner/
-│   │   ├── __init__.py
-│   │   ├── aws_live_scanner.py     # Live AWS Boto3 auditor (S3 & EC2 Security Groups)
-│   │   ├── azure_live_scanner.py   # Live Azure ARM auditor (Storage Accounts & NSGs)
-│   │   ├── iam_scanner.py          # Identity & Access Management configuration auditor
-│   │   ├── keyvault_scanner.py     # Secrets management auditor
-│   │   ├── nsg_scanner.py          # NSG rule parser (offline / mock)
-│   │   └── storage_scanner.py      # Storage configuration parser (offline / mock)
+│   │   ├── __init__.py                  # Package marker
+│   │   ├── aws_live_scanner.py          # Boto3 scanner for S3 and EC2 security groups
+│   │   ├── azure_live_scanner.py        # Azure ARM scanner for storage accounts and NSGs
+│   │   ├── iam_scanner.py               # IAM and identity posture auditor
+│   │   ├── keyvault_scanner.py          # Secrets and Key Vault auditor
+│   │   ├── nsg_scanner.py               # Network Security Group rule parser
+│   │   └── storage_scanner.py           # Storage configuration parser
 │   └── web3_bridge/
-│       ├── __init__.py
-│       ├── contract_data.json      # Compiled contract ABI and bytecode
-│       ├── contract_interface.py   # Web3.py wrapper for Ganache EVM transactions
-│       └── deploy.py               # Automated contract deployment script
+│       ├── __init__.py                  # Package marker
+│       ├── contract_data.json           # Compiled contract ABI and bytecode
+│       ├── contract_interface.py        # Web3.py client for Ganache EVM RPC
+│       └── deploy.py                    # Contract deployment script
 ├── database/
-│   ├── db_manager.py               # SQLite schema definition and CRUD audit repository
-│   ├── schema.sql                  # Relational schema definition
-│   └── .gitkeep                    # Retains database directory structure
-├── mock_data/                      # Synthetic multi-cloud configurations for offline audits
-│   ├── entra_id_users.json
-│   ├── key_vaults.json
-│   ├── network_security_groups.json
-│   └── storage_accounts.json
+│   ├── db_manager.py                    # SQLite CRUD and schema manager
+│   └── schema.sql                       # Database schema definition
+├── docs/
+│   └── screenshots/                     # Application walkthrough captures
+├── mock_data/                           # Offline JSON fixtures for testing
+│   ├── entra_id_users.json              # Mock Azure AD/Entra users
+│   ├── key_vaults.json                  # Mock Key Vault data
+│   ├── network_security_groups.json     # Mock NSG firewall rules
+│   └── storage_accounts.json            # Mock storage accounts
+├── requirements.txt                     # Project Python dependencies
 ├── static/
 │   ├── css/
-│   │   └── custom.css              # Custom styling and branding overlays
+│   │   └── custom.css                   # Custom styles and animations
 │   ├── img/
-│   │   ├── aws_logo.png            # AWS brand assets
-│   │   └── azure_logo.png          # Azure brand assets
+│   │   ├── aws_logo.png                 # AWS branding icon
+│   │   └── azure_logo.png               # Azure branding icon
 │   ├── js/
-│   │   ├── charts.js               # Dashboard metrics and Chart.js integration
-│   │   ├── verification.js         # EVM cryptographic integrity verification
-│   │   └── wizard.js               # Multi-stage audit wizard and polling engine
-│   ├── reports/
-│   │   └── .gitkeep                # Output directory for generated PDF audits
-│   └── logo.png                    # Application logo mark
+│   │   ├── charts.js                    # Dashboard Chart.js integration
+│   │   ├── verification.js              # EVM integrity check and tamper demo
+│   │   └── wizard.js                    # Multi-stage scan runner and polling
+│   └── logo.png                         # Application logo
 ├── templates/
-│   ├── base.html                   # Global layout and responsive navigation shell
-│   ├── dashboard.html              # Posture monitoring console
-│   ├── findings.html               # Granular security findings table
-│   ├── history.html                # Historical scan review interface
-│   ├── integrations.html           # Cloud provider credentials configuration
-│   ├── settings.html               # Thresholds, rulesets, and EVM contract settings
-│   ├── verify_modal.html           # EVM verification component
-│   └── wizard.html                 # Audit execution wizard overlay
-├── docs/
-│   └── screenshots/                # Application documentation screenshots
-│       └── .gitkeep
-├── .env.example                    # Template environment variables file
-├── .gitignore                      # Git exclusion rules for secrets and runtime files
-├── requirements.txt                # Python dependencies
-└── README.md
+│   ├── base.html                        # Global layout and navbar
+│   ├── dashboard.html                   # Main metrics and scan trigger
+│   ├── findings.html                    # Granular findings and remediations
+│   ├── history.html                     # Scan history and report downloads
+│   ├── integrations.html                # Cloud provider credential management
+│   ├── settings.html                    # Governance thresholds and framework requests
+│   ├── verify_modal.html                # EVM verification modal
+│   └── wizard.html                      # Scan progress modal overlay
+├── test_azure_conn.py                   # Azure ARM connection test script
+├── test_engine.py                       # Scoring engine unit tests
+└── test_live_scanner.py                 # Live cloud scanner test harness
 ```
 ## Development Roadmap & Status
 
@@ -263,7 +257,7 @@ cloud-security-audit/
 ### 2. Installation
 ```bash
 # Clone the repository
-git clone [https://github.com/Harman-0622/cloud-security-audit.git](https://github.com/Harman-0622/cloud-security-audit.git)
+git clone https://github.com/Harman-0622/cloud-security-audit.git
 cd cloud-security-audit
 
 # Create and activate virtual environment
@@ -294,7 +288,7 @@ AWS_SECRET_ACCESS_KEY="your-aws-secret-access-key"
 AWS_DEFAULT_REGION="ap-south-1"
 
 # Ganache Blockchain Node & Smart Contract
-GANACHE_RPC_URL="[http://127.0.0.1:7545](http://127.0.0.1:7545)"
+GANACHE_RPC_URL="http://127.0.0.1:7545"
 CONTRACT_ADDRESS="0x8B757aD9A22d8C7B07e05C3Bf3B73738B1e"
 WALLET_PRIVATE_KEY="your-ganache-account-private-key"
 ```
